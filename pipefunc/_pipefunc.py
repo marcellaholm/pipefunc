@@ -1016,7 +1016,6 @@ class Pipeline:
         self,
         *,
         conservatively_combine: bool = False,
-        default_color: str = "skyblue",
     ) -> list[str]:
         func_node_colors = []
         combinable_nodes = self._identify_combinable_nodes(
@@ -1025,6 +1024,7 @@ class Pipeline:
         )
         combinable_nodes = _combine_nodes(combinable_nodes)
         node_sets = [{k, *v} for k, v in combinable_nodes.items()]
+        color_index = len(node_sets)  # for non-combinable nodes
         for node in self.graph.nodes:
             if isinstance(node, PipelineFunction):
                 i = next(
@@ -1034,7 +1034,8 @@ class Pipeline:
                 if i is not None:
                     func_node_colors.append(f"C{i}")
                 else:
-                    func_node_colors.append(default_color)
+                    func_node_colors.append(f"C{color_index}")
+                    color_index += 1
         return func_node_colors
 
     def visualize(
@@ -1101,9 +1102,11 @@ class Pipeline:
             the search from. It is used to get the starting function in the
             pipeline.
         conservatively_combine
-            Only combine function nodes if all of their predecessors have the
-            same root arguments. If False, combine function nodes if any of
-            their predecessors have the same root arguments.
+            If True, only combine a function node with its predecessors if all
+            of its predecessors have the same root arguments as the function
+            node itself. If False, combine a function node with its predecessors
+            if any of its predecessors have the same root arguments as the
+            function node.
 
         Returns
         -------
@@ -1182,9 +1185,11 @@ class Pipeline:
             the simplification from. It is used to get the starting function in the
             pipeline.
         conservatively_combine
-            Only combine function nodes if all of their predecessors have the
-            same root arguments. If False, combine function nodes if any of
-            their predecessors have the same root arguments.
+            If True, only combine a function node with its predecessors if all
+            of its predecessors have the same root arguments as the function
+            node itself. If False, combine a function node with its predecessors
+            if any of its predecessors have the same root arguments as the
+            function node.
 
         Returns
         -------
