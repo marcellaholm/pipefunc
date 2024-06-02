@@ -11,8 +11,12 @@ dependencies:
   - networkx
   - psutil
   - versioningit
-  - typing_extensions
   - cloudpickle
+  - numpy
+  # optional-dependencies: xarray
+  - xarray
+  # optional-dependencies: zarr
+  - zarr
   # optional-dependencies: plotting
   - matplotlib
   - pygraphviz
@@ -23,3 +27,6 @@ dependencies:
   - coverage
   - pytest-cov
   - pandas
+  - adaptive
+  - xarray
+  - zarr

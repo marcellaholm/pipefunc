@@ -5,12 +5,12 @@
 [![Python](https://img.shields.io/pypi/pyversions/pipefunc)](https://pypi.org/project/pipefunc/)
 [![PyPi](https://img.shields.io/pypi/v/pipefunc?color=blue)](https://pypi.org/project/pipefunc/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![pytest](https://github.com/basnijholt/pipefunc/actions/workflows/pytest.yml/badge.svg)](https://github.com/basnijholt/pipefunc/actions/workflows/pytest.yml)
+[![pytest](https://github.com/pipefunc/pipefunc/actions/workflows/pytest.yml/badge.svg)](https://github.com/pipefunc/pipefunc/actions/workflows/pytest.yml)
 [![Conda](https://img.shields.io/badge/install%20with-conda-green.svg)](https://anaconda.org/conda-forge/pipefunc)
-[![Coverage](https://img.shields.io/codecov/c/github/basnijholt/pipefunc)](https://codecov.io/gh/basnijholt/pipefunc)
+[![Coverage](https://img.shields.io/codecov/c/github/pipefunc/pipefunc)](https://codecov.io/gh/pipefunc/pipefunc)
 [![Documentation](https://readthedocs.org/projects/pipefunc/badge/?version=latest)](https://pipefunc.readthedocs.io/en/latest/?badge=latest)
 [![Downloads](https://img.shields.io/conda/dn/conda-forge/pipefunc.svg)](https://anaconda.org/conda-forge/pipefunc)
-[![GitHub](https://img.shields.io/github/stars/basnijholt/pipefunc.svg?style=social)](https://github.com/basnijholt/pipefunc/stargazers)
+[![GitHub](https://img.shields.io/github/stars/pipefunc/pipefunc.svg?style=social)](https://github.com/pipefunc/pipefunc/stargazers)
 
 
 ![](https://user-images.githubusercontent.com/6897215/253785642-cf2a6941-2ea6-41b0-8225-b3e52e94c4de.png)
@@ -32,36 +32,28 @@
 
 ## :thinking: What is this?
 
-`pipefunc` is a Python library designed to create and manage complex networks of interdependent functions, often known as function pipelines.
+`pipefunc` is a Python library for creating and running function pipelines. By annotating functions and specifying their outputs, it forms a pipeline that automatically organizes the execution order to satisfy dependencies. Just specify the names of the outputs you want to compute, and `pipefunc` will handle the rest by leveraging the parameter names of the annotated functions.
 
-In a function pipeline, each function can have dependencies on the results of other functions. Managing these dependencies, ensuring each function has the inputs it needs, and determining the order of execution can become an annoying bookkeeping task in complex cases.
-
-`pipefunc` simplifies this process by allowing you to declare the dependencies of each function and automatically organizing the execution order to satisfy these dependencies. Additionally, the library provides features for visualizing the function pipeline, simplifying the pipeline graph, caching function results for efficiency, and profiling resource usage for optimization.
-
-For example, imagine you have a set of functions where `function B` needs the output from `function A`, and `function C` needs the outputs from both `function A` and `function B`. `pipefunc` allows you to specify these dependencies when you create the functions and then automatically manages their execution. It also provides tools for visualizing this function network, simplifying it if possible, and understanding the resource usage of each function.
-
-The library is designed to be an efficient and flexible tool for managing complex function dependencies in an intuitive and clear way. Whether you're dealing with data processing tasks, scientific computations, machine learning (AI) workflows, or other scenarios where functions depend on one another, `pipefunc` can help streamline your code and improve your productivity.
+Whether you're working with data processing, scientific computations, machine learning (AI) workflows, or any other scenario involving interdependent functions, `pipefunc` helps you focus on the logic of your code while it handles the intricacies of function dependencies and execution order.
 
 ## :rocket: Key Features
 
-Some of the key features of `pipefunc` include:
-
-1. 🚀 **Function Composition and Pipelining:** The core functionality of `pipefunc` is to create a pipeline of functions, allowing you to feed the output of one function into another, and execute them in the right order.
-1. 📊 **Visualizing Pipelines:** `pipefunc` can generate a visual graph of the function pipeline, making it easier to understand the flow of data.
-1. 💡 **Flexible Function Arguments:** `pipefunc` lets you call a function with different combinations of arguments, automatically determining which other functions to call based on the arguments you provide.
-1. 👥 **Multiple Outputs:** `pipefunc` supports functions that return multiple results, allowing each result to be used as input to other functions.
-1. ➡️ **Reducing Pipelines:** `pipefunc` can simplify a complex pipeline by merging nodes, improving computational efficiency at the cost of losing visibility into some intermediate steps.
-1. 🎛️ **Resources Report:** `pipefunc` provides a report on the performance of your pipeline, including CPU usage, memory usage, and execution time, helping you identify bottlenecks and optimize your code.
-1. 🔄 **Parallel Execution and Caching:** `pipefunc` supports parallel execution of functions, and caching of results to avoid redundant computation.
-1. 🔍 **Parameter Sweeps:** `pipefunc` provides a utility for generating combinations of parameters to use in a parameter sweep, along with the ability to cache results to optimize the sweep.
-1. 🛠️ **Flexibility and Ease of Use:** `pipefunc` is a lightweight, flexible, and powerful tool for managing complex function dependencies in a clear and intuitive way, designed to improve your productivity in any scenario where functions depend on one another.
-
+1. 🚀 **Function Composition and Pipelining**: Create pipelines by using the `@pipefunc` decorator; execution order is automatically handled.
+2. 📊 **Pipeline Visualization**: Generate visual graphs of your pipelines to better understand the flow of data.
+3. 👥 **Multiple Outputs**: Handle functions that return multiple results, allowing each result to be used as input to other functions.
+4. 🔁 **Map-Reduce Support**: Perform "map" operations to apply functions over data and "reduce" operations to aggregate results, allowing n-dimensional mappings.
+5. ➡️ **Pipeline Simplification**: Merge nodes in complex pipelines to improve computational efficiency, trading off visibility into intermediate steps.
+6. 🎛️ **Resource Usage Profiling**: Get reports on CPU usage, memory consumption, and execution time to identify bottlenecks and optimize your code.
+7. 🔄 **Parallel Execution and Caching**: Run functions in parallel and cache results to avoid redundant computations.
+8. 🔍 **Parameter Sweep Utilities**: Generate parameter combinations for parameter sweeps and optimize the sweeps with result caching.
+9. 💡 **Flexible Function Arguments**: Call functions with different argument combinations, letting `pipefunc` determine which other functions to call based on the provided arguments.
+10. 🏗️ **Leverages giants**: Builds on top of [NetworkX](https://networkx.org/) for graph algorithms, [NumPy](https://numpy.org/) for multi-dimensional arrays, and optionally [Xarray](https://docs.xarray.dev/) for labeled multi-dimensional arrays [Zarr](https://zarr.readthedocs.io/) to store results in memory/disk/cloud or any key-value store.
 
 ## :test_tube: How does it work?
 
 pipefunc provides a Pipeline class that you use to define your function pipeline.
-You add functions to the pipeline using the `pipefunc` decorator, which also lets you specify a function's output name and dependencies.
-Once your pipeline is defined, you can execute it for specific output values, simplify it by combining functions with the same root arguments, visualize it as a directed graph, and profile the resource usage of the pipeline functions.
+You add functions to the pipeline using the `pipefunc` decorator, which also lets you specify the function's output name.
+Once your pipeline is defined, you can execute it for specific output values, simplify it by combining function nodes, visualize it as a directed graph, and profile the resource usage of the pipeline functions.
 For more detailed usage instructions and examples, please check the usage example provided in the package.
 
 Here is a simple example usage of pipefunc to illustrate its primary features:
@@ -83,22 +75,26 @@ def f_e(c, d, x=1):
     return c * d * x
 
 # Create a pipeline with these functions
-funcs = [f_c, f_d, f_e]
-pipeline = Pipeline(funcs, profile=True)
+pipeline = Pipeline([f_c, f_d, f_e], profile=True)  # `profile=True` enables resource profiling
 
-# You can access and call these functions using the func method
+# Call the pipeline directly for different outputs:
+assert pipeline("d", a=2, b=3) == 15
+assert pipeline("e", a=2, b=3, x=1) == 75
+
+# Or create a new function for a specific output
 h_d = pipeline.func("d")
 assert h_d(a=2, b=3) == 15
 
 h_e = pipeline.func("e")
 assert h_e(a=2, b=3, x=1) == 75
+# Instead of providing the root arguments, you can also provide the intermediate results directly
 assert h_e(c=5, d=15, x=1) == 75
 
 # Visualize the pipeline
 pipeline.visualize()
 
 # Get all possible argument mappings for each function
-all_args = pipeline.all_arg_combinations()
+all_args = pipeline.all_arg_combinations
 print(all_args)
 
 # Show resource reporting (only works if profile=True)
@@ -106,11 +102,35 @@ pipeline.resources_report()
 ```
 
 This example demonstrates defining a pipeline with `f_c`, `f_d`, `f_e` functions, accessing and executing these functions using the pipeline, visualizing the pipeline graph, getting all possible argument mappings, and reporting on the resource usage.
-This basic example should give you an idea of how to use pipefunc to construct and manage function pipelines.
+This basic example should give you an idea of how to use `pipefunc` to construct and manage function pipelines.
+
+The following example demonstrates how to perform a map-reduce operation using `pipefunc`:
+
+```python
+from pipefunc import pipefunc, Pipeline
+from pipefunc.map import load_outputs
+import numpy as np
+
+@pipefunc(output_name="c", mapspec="a[i], b[j] -> c[i, j]")  # the mapspec is used to specify the mapping
+def f(a: int, b: int):
+    return a + b
+
+@pipefunc(output_name="mean")  # there is no mapspec, so this function takes the full 2D array
+def g(c: np.ndarray):
+    return np.mean(c)
+
+pipeline = Pipeline([f, g])
+inputs = {"a": [1, 2, 3], "b": [4, 5, 6]}
+pipeline.map(inputs, run_folder="my_run_folder", parallel=True)
+result = load_outputs("mean", run_folder="my_run_folder")
+print(result)  # prints 7.0
+```
+
+Here the `mapspec` argument is used to specify the mapping between the inputs and outputs of the `f` function, it creates the product of the `a` and `b` input lists and computes the sum of each pair. The `g` function then computes the mean of the resulting 2D array. The `map` method executes the pipeline for the `inputs`, and the `load_outputs` function is used to load the results of the `g` function from the specified run folder.
 
 ## :notebook: Jupyter Notebook Example
 
-See the detailed usage example and more in our [example.ipynb](https://github.com/basnijholt/pipefunc/blob/main/example.ipynb).
+See the detailed usage example and more in our [example.ipynb](https://github.com/pipefunc/pipefunc/blob/main/example.ipynb).
 
 ## :computer: Installation
 
@@ -129,13 +149,13 @@ pip install "pipefunc[plotting]"
 or install **main** with:
 
 ```bash
-pip install -U https://github.com/basnijholt/pipefunc/archive/main.zip
+pip install -U https://github.com/pipefunc/pipefunc/archive/main.zip
 ```
 
 or clone the repository and do a dev install (recommended for dev):
 
 ```bash
-git clone git@github.com:basnijholt/pipefunc.git
+git clone git@github.com:pipefunc/pipefunc.git
 cd pipefunc
 pip install -e ".[dev,test,plotting]"
 ```

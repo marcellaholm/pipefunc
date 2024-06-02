@@ -11,26 +11,16 @@ dependencies:
   - networkx
   - psutil
   - versioningit
-  - typing_extensions
   - cloudpickle
+  - numpy
+  # optional-dependencies: xarray
+  - xarray
+  # optional-dependencies: zarr
+  - zarr
   # optional-dependencies: plotting
   - matplotlib
   - pygraphviz
   - holoviews
   - bokeh
-  # optional-dependencies: test
-  - pytest
-  - coverage
-  - pytest-cov
-  - pandas
-  # optional-dependencies: docs
-  - myst-nb
-  - sphinx
-  - furo
-  - myst-parser
-  - emoji
-  - jupytext
-  - jupyterlite-sphinx
-  - pandas
   - pip:
-    - jupyterlite-xeus-python
+    - ../.[docs]

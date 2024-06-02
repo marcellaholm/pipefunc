@@ -1,7 +1,7 @@
-## `pipefunc` module
+## `pipefunc.lazy` module
 
 ```{eval-rst}
-.. automodule:: pipefunc
+.. automodule:: pipefunc.lazy
     :members:
     :undoc-members:
     :show-inheritance:

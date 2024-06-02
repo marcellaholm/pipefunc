@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Iterable
+from typing import TYPE_CHECKING
 
 import tomllib
 
-PIP_ONLY_DEPS = {"jupyterlite-xeus-python"}
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+PIP_ONLY_DEPS: set[str] = set()
 
 
 def clean_deps(deps: Iterable[str]) -> list[str]:
@@ -33,13 +36,14 @@ def write_deps(deps: Iterable[str], label: str = "", indent: int = 2) -> str:
 def generate_environment_yml(
     data: dict,
     name: str,
-    sections: tuple[str, ...] = ("all", "test", "docs", "plotting"),
+    sections: tuple[str, ...] = ("test", "docs", "plotting"),
     default_packages: tuple[str, ...] = ("python", "pip"),
     filename: str | None = "environment.yml",
+    pip_deps: list[str] | None = None,
 ) -> str:
     """Generate environment.yml from pyproject.toml."""
-    pip_deps = []
-
+    if pip_deps is None:
+        pip_deps = []
     dependencies = clean_deps(data["project"]["dependencies"])
     pip_deps += generate_pip_deps(dependencies)
 
@@ -89,7 +93,7 @@ if __name__ == "__main__":
     generate_environment_yml(
         data,
         name="pipefunc",
-        sections=("test", "plotting"),
+        sections=("test", "plotting", "xarray", "zarr"),
         filename="environment.yml",
     )
 
@@ -97,6 +101,7 @@ if __name__ == "__main__":
     generate_environment_yml(
         data,
         name="pipefunc-sphinx",
-        sections=("test", "docs", "plotting"),
+        sections=("plotting", "xarray", "zarr"),
         filename="docs/environment-sphinx.yml",
+        pip_deps=["../.[docs]"],
     )

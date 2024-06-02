@@ -3,9 +3,9 @@
 #
 
 import os
+import shutil
 import sys
 from pathlib import Path
-import shutil
 
 package_path = Path("../..").resolve()
 sys.path.insert(0, str(package_path))
@@ -20,11 +20,11 @@ import pipefunc  # noqa: E402, isort:skip
 # -- Project information -----------------------------------------------------
 
 project = "pipefunc"
-copyright = "2023, Bas Nijholt"
 author = "Bas Nijholt"
+copyright = f"2024, {author}"
 
-version = pipefunc.__version__
-release = pipefunc.__version__
+version = ".".join(pipefunc.__version__.split(".")[:3])
+release = version
 
 
 # -- General configuration ---------------------------------------------------
@@ -37,7 +37,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
-    "jupyterlite_sphinx",
+    "sphinx_autodoc_typehints",
     "myst_nb",
 ]
 
@@ -50,7 +50,8 @@ pygments_style = "sphinx"
 
 # -- Options for HTML output -------------------------------------------------
 
-html_theme = "furo"
+html_logo = "https://github.com/basnijholt/nijho.lt/raw/92b0aa820318f466388d828adf01120760255acf/content/project/pipefunc/featured.png"
+html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
 
 # -- Options for HTMLHelp output ---------------------------------------------
@@ -73,9 +74,6 @@ nb_execution_mode = "cache"
 nb_execution_timeout = 180
 nb_execution_raise_on_error = True
 myst_heading_anchors = 3
-
-# Jupyterlite configuration
-jupyterlite_contents = ["notebooks/"]
 
 
 def replace_named_emojis(input_file: Path, output_file: Path) -> None:
@@ -114,6 +112,8 @@ nb_docs_folder = docs_path / "source" / "notebooks"
 nb_docs_folder.mkdir(exist_ok=True)
 shutil.copy(nb, nb_docs_folder)
 
+# Group into single streams to prevent multiple output boxes
+nb_merge_streams = True
 
-def setup(app):
+def setup(app) -> None:
     pass
