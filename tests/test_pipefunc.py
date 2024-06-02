@@ -515,7 +515,7 @@ def test_pipeline_function_annotations():
     result = add_func(x=1, y=2.0)
     assert result == (2, 3.0)
 
-    assert str(add_func) == "add_numbers(x, y) → a_plus_one, b_plus_one"
+    assert str(add_func) == "add_numbers(...) → a_plus_one, b_plus_one"
     assert repr(add_func) == "PipeFunc(add_numbers)"
 
 
