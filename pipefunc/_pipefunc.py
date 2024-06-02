@@ -299,13 +299,13 @@ class PipeFunc(Generic[T]):
         else:
             self.profiling_stats = None
 
-    @property
+    @functools.cached_property
     def parameter_annotations(self) -> dict[str, Any]:
         """Return the type annotations of the wrapped function's parameters."""
         type_hints = get_type_hints(self.func)
         return {self.renames.get(k, k): v for k, v in type_hints.items() if k != "return"}
 
-    @property
+    @functools.cached_property
     def output_annotation(self) -> Any:
         """Return the type annotation of the wrapped function's output."""
         return get_type_hints(self.func).get("return", Any)
