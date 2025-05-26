@@ -48,7 +48,8 @@ def _create_progress_bar(name: OUTPUT_TYPE, progress: float) -> widgets.FloatPro
         "text-overflow: ellipsis",  # Shows "..." when text is truncated
     ]
     style = "; ".join(styles)
-    tooltip = {"tooltip" if _IPYWIDGETS_MAJOR_VERSION >= 8 else "description_tooltip": description}  # noqa: PLR2004
+    tooltip_key = "tooltip" if _IPYWIDGETS_MAJOR_VERSION >= 8 else "description_tooltip"  # noqa: PLR2004
+    tooltip = {tooltip_key: description}
     return widgets.FloatProgress(
         value=progress,
         max=1.0,
@@ -117,7 +118,9 @@ class ProgressTracker:
         self._first_auto_update_interval: float = 1.0
         self._sync_update_interval: float = 0.01
         self.progress_bars: dict[OUTPUT_TYPE, widgets.FloatProgress] = {}
-        self._progress_vboxes: dict[OUTPUT_TYPE, widgets.VBox] = {}
+        self._progress_widgets: dict[
+            OUTPUT_TYPE, widgets.Widget
+        ] = {}  # Changed from _progress_vboxes
         self.labels: dict[OUTPUT_TYPE, dict[OUTPUT_TYPE, widgets.HTML]] = {}
         self.buttons: dict[OUTPUT_TYPE, widgets.Button] = {
             "update": _create_button(
@@ -149,6 +152,24 @@ class ProgressTracker:
                 ),
                 "speed": _create_html_label("speed-label", "Speed: Calculating..."),
             }
+            # Initially, store the VBox
+            labels = self.labels[name]
+            labels_box = widgets.HBox(
+                [labels["percentage"], labels["estimated_time"], labels["speed"]],
+                layout=widgets.Layout(justify_content="space-between"),
+            )
+            hue = _get_scope_hue(name)
+            border_color = _scope_border_color(hue)
+            border = f"1px solid {border_color}"
+            container = widgets.VBox(
+                [self.progress_bars[name], labels_box],
+                layout=widgets.Layout(border=border, margin="2px 4px", padding="2px"),
+            )
+            container.add_class("progress-vbox")
+            if hue is not None:
+                container.add_class(f"scope-bg-{hue}")
+            self._progress_widgets[name] = container
+
         self.auto_update_interval_label = _create_html_label(
             "interval-label",
             "Auto-update every: N/A",
@@ -156,7 +177,9 @@ class ProgressTracker:
         self._initial_update_period: float = 30.0
         self._initial_max_update_interval: float = 1.0
         self.start_time: float = 0.0
-        self._marked_completed: set[OUTPUT_TYPE] = set()
+        self._marked_completed: set[OUTPUT_TYPE] = (
+            set()
+        )  # Tracks items that have been *transformed*
         if display:
             self.display()
         if self.task is not None:
@@ -167,39 +190,109 @@ class ProgressTracker:
         self.task = task
         self._set_auto_update(self.auto_update)
 
+    def _create_compact_widget(self, name: OUTPUT_TYPE, status: Status) -> widgets.HTML:
+        output_name_str = ", ".join(at_least_tuple(name))
+        icon = "✅" if status.n_failed == 0 else "❌"
+
+        summary_text = f"{icon} {output_name_str} ({status.progress * 100:.0f}%) - Done: {status.elapsed_time():.1f}s"
+
+        completed_str = f"{status.n_completed:,}"
+        failed_str = f"{status.n_failed:,}"
+        left_str = f"{status.n_left:,}"
+        elapsed_s = status.elapsed_time()
+        speed_val = status.n_attempted / elapsed_s if elapsed_s > 0 else float("inf")
+        speed_str = f"{speed_val:,.2f}"
+
+        tooltip_text = (
+            f"Completed: {completed_str}, Failed: {failed_str}, Left: {left_str} | "
+            f"Speed: {speed_str} iter/s | Elapsed: {elapsed_s:.2f}s"
+        )
+
+        hue = _get_scope_hue(name)
+        border_color = _scope_border_color(hue)
+
+        # Using a class that could be styled further by the user if needed
+        html_value = _span("compact-summary-label", summary_text)
+
+        compact_widget = widgets.HTML(value=html_value, tooltip=tooltip_text)
+        compact_widget.layout = widgets.Layout(
+            border=f"1px solid {border_color}",
+            margin="2px 4px",
+            padding="4px 8px",  # Slightly more padding for a single line
+            width="auto",
+            min_height="28px",  # Keep similar height to original progress bar
+        )
+
+        compact_widget.add_class("progress-vbox")  # For consistent general styling
+        compact_widget.add_class("pulse-animation")
+        if hue is not None:
+            compact_widget.add_class(f"scope-bg-{hue}")
+
+        return compact_widget
+
     def update_progress(self, _: Any = None, *, force: bool = False) -> None:
         """Update the progress values and labels."""
         now = time.monotonic()
         return_early = False
         if not self.in_async and not force:
             assert self.task is None
-            # If not in asyncio, `update_progress` is called after each iteration,
-            # so, we throttle the updates to avoid excessive updates.
             if now - self.last_update_time < self._sync_update_interval:
                 return_early = True
 
         for name, status in self.progress_dict.items():
-            if status.progress == 0 or name in self._marked_completed:
+            if status.progress == 0:  # Skip items that haven't started
                 continue
+
+            if name in self._marked_completed:  # If already compacted, skip
+                continue
+
             if return_early and status.progress < 1.0:
                 return
-            progress_bar = self.progress_bars[name]
-            progress_bar.value = status.progress
+
             if status.progress >= 1.0:
-                progress_bar.bar_style = "success" if status.n_failed == 0 else "danger"
-                progress_bar.remove_class("animated-progress")
-                progress_bar.add_class("completed-progress")
-                self._marked_completed.add(name)
-                if status.progress == 1.0:  # Newly completed
-                    self._progress_vboxes[name].add_class("pulse-animation")
-            else:
+                # Item is complete, transform its widget
+                compact_widget = self._create_compact_widget(name, status)
+
+                # If _widgets (the main VBox) is already materialized, update its children
+                if "_widgets" in self.__dict__ and hasattr(self._widgets, "children"):
+                    children_list = list(self._widgets.children)
+                    try:
+                        # self._progress_widgets[name] should still hold the original VBox at this point
+                        widget_index = children_list.index(self._progress_widgets[name])
+                        children_list[widget_index] = compact_widget
+                        self._widgets.children = tuple(children_list)
+                    except ValueError:
+                        # This might happen if the widget was already replaced due to rapid updates
+                        # or if the structure of _widgets.children is not as expected.
+                        # For this phase, we'll assume it's found or the _progress_widgets update handles it.
+                        pass
+
+                self._progress_widgets[name] = (
+                    compact_widget  # This ensures future renders of _widgets use the compact form
+                )
+                self._marked_completed.add(name)  # Mark as transformed
+
+                # Clean up no longer needed specific widgets for this item
+                if name in self.progress_bars:
+                    del self.progress_bars[name]
+                if name in self.labels:
+                    del self.labels[name]
+
+            elif (
+                name in self.progress_bars
+            ):  # Check if widgets still exist (haven't been compacted)
+                progress_bar = self.progress_bars[name]
+                progress_bar.value = status.progress
+                progress_bar.bar_style = (
+                    "info"  # Reset to info, completion style handled by compact widget
+                )
                 progress_bar.remove_class("completed-progress")
                 progress_bar.add_class("animated-progress")
-            self._update_labels(name, status)
+                self._update_labels(name, status)
+
         if self._all_completed():
             self._mark_completed()
         self.last_update_time = time.monotonic()
-        # Set the update interval to 50 times the total time this method took
         self._sync_update_interval = clip(50 * (self.last_update_time - now), 0.01, 1.0)
 
     def _update_labels(self, name: OUTPUT_TYPE, status: Status) -> None:
@@ -270,7 +363,12 @@ class ProgressTracker:
             await asyncio.sleep(new_interval)
 
     def _all_completed(self) -> bool:
-        return all(status.progress >= 1.0 for status in self.progress_dict.values())
+        # Check if all tasks are *transformed* (marked_completed) or their progress is >= 1.0
+        # This ensures that if a task completes but transformation hasn't run yet, it's still considered.
+        return all(
+            name in self._marked_completed or status.progress >= 1.0
+            for name, status in self.progress_dict.items()
+        )
 
     def _mark_completed(self) -> None:
         if self.auto_update:
@@ -311,41 +409,35 @@ class ProgressTracker:
             self._toggle_auto_update()
         for button in self.buttons.values():
             button.disabled = True
-        for progress_bar in self.progress_bars.values():
-            if progress_bar.value < 1.0:
-                progress_bar.bar_style = "danger"
-                progress_bar.remove_class("animated-progress")
-                progress_bar.add_class("completed-progress")
+
+        # For items not yet compacted, mark their progress bars as cancelled/failed
+        for name, progress_widget in self._progress_widgets.items():
+            if name not in self._marked_completed and name in self.progress_bars:
+                # Check if it's still a VBox with a progress bar
+                if (
+                    isinstance(progress_widget, widgets.VBox)
+                    and self.progress_bars[name] in progress_widget.children
+                ):
+                    pb = self.progress_bars[name]
+                    if pb.value < 1.0:
+                        pb.bar_style = "danger"
+                        pb.remove_class("animated-progress")
+                        pb.add_class("completed-progress")  # Visually "stops" it
+
         self.auto_update_interval_label.value = _span("interval-label", "Calculation cancelled ❌")
 
     @functools.cached_property
     def _widgets(self) -> widgets.VBox:
         """Display the progress widgets with styles."""
-        for name in self.progress_dict:
-            labels = self.labels[name]
-            labels_box = widgets.HBox(
-                [labels["percentage"], labels["estimated_time"], labels["speed"]],
-                layout=widgets.Layout(justify_content="space-between"),
-            )
-            hue = _get_scope_hue(name)
-            border_color = _scope_border_color(hue)
-            border = f"1px solid {border_color}"
-            container = widgets.VBox(
-                [self.progress_bars[name], labels_box],
-                layout=widgets.Layout(border=border, margin="2px 4px", padding="2px"),
-            )
-            self._progress_vboxes[name] = container
-            container.add_class("progress-vbox")
-            if hue is not None:  # `background-color` is not settable for `VBox`, so use CSS classes
-                container.add_class(f"scope-bg-{hue}")
+        # Now iterates over _progress_widgets which holds either VBox or the compact HTML
+        parts = list(self._progress_widgets.values())
 
         buttons = self.buttons
-        button_box = widgets.HBox(
-            [buttons["update"], buttons["toggle_auto_update"], buttons["cancel"]],
-            layout=widgets.Layout(justify_content="center"),
-        )
-        parts = list(self._progress_vboxes.values())
-        if self.task:
+        if self.task:  # Only show buttons if there's an active task context
+            button_box = widgets.HBox(
+                [buttons["update"], buttons["toggle_auto_update"], buttons["cancel"]],
+                layout=widgets.Layout(justify_content="center"),
+            )
             parts.extend([button_box, self.auto_update_interval_label])
         return widgets.VBox(parts, layout=widgets.Layout(max_width="700px"))
 
@@ -401,7 +493,7 @@ class ProgressTracker:
                 }
                 100% {
                     box-shadow: 0 0 0 0 rgba(46, 204, 113, 0);
-                    border-color: inherit;
+                    border-color: inherit; /* Use parent's border or default */
                     transform: scale(1);
                 }
             }
@@ -434,7 +526,7 @@ class ProgressTracker:
             .widget-button {
                 margin-top: 5px;
             }
-            .progress-vbox {
+            .progress-vbox { /* Applied to both original VBox and new compact HTML */
                 border-radius: 10px;
                 box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
                 transition: all 0.2s ease-in-out;
@@ -446,6 +538,13 @@ class ProgressTracker:
                 box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
                 top: -2px;
             }
+            .compact-summary-label { /* Style for the text inside the compact HTML widget */
+                font-weight: bold;
+                color: #333; /* A neutral dark color */
+                display: block; /* Ensures it takes up the space */
+                text-align: left; /* Align text to the left */
+            }
+            </style>
             """,
         )
         hues = {hue for name in self.progress_dict if (hue := _get_scope_hue(name)) is not None}
